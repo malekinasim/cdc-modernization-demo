@@ -104,7 +104,10 @@ What the middleware does:
 
 1. Unwraps the Debezium envelopes and translates codes, dates and prices.
 2. Keeps KTables of customers, products, orders, order lines and shipments.
-3. Builds and publishes the read model rows, keyed by their primary keys.
+3. Builds and publishes the read model rows, keyed by their primary keys. Order totals are an aggregate over the
+   order lines; `daily_sales` is a windowed aggregation (tumbling one-day windows per product).
+   The daily sales state store is also exposed directly through Interactive Queries, to compare reading from the
+   stream processor's own state with reading from the read database.
 4. Routes changes between the two services, and filters out changes made by the sync (loop prevention).
 5. Sends records it cannot process (unknown product, negative quantity, date `'20261332'`) to a dead-letter topic
    and keeps going.
