@@ -18,12 +18,14 @@
 
     <name>cdc-modernization-demo</name>
     <description>
-        CQRS where the read side is kept up to date with CDC (Debezium), Kafka and a Kafka Streams middleware.
+        CQRS with a CDC-fed read side, and two-way sync between two services without loops,
+        built with Debezium, Kafka and a Kafka Streams middleware.
     </description>
     <url>https://github.com/malekinasim/cdc-modernization-demo</url>
 
     <modules>
-        <module>project-service</module>
+        <module>order-service</module>
+        <module>shipping-service</module>
         <module>middleware</module>
         <module>query-service</module>
     </modules>
