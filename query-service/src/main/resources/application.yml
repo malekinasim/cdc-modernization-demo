@@ -3,4 +3,4 @@ spring:
     name: query-service
 
 server:
-  port: 8084
+  port: 8083

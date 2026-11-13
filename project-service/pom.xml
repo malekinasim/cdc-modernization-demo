@@ -10,9 +10,9 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>legacy-app</artifactId>
-    <name>legacy-app</name>
-    <description>The legacy monolith: a deliberately old-style Spring Boot app on its own PostgreSQL database. Source of CDC events.</description>
+    <artifactId>project-service</artifactId>
+    <name>project-service</name>
+    <description>The application (command side): projects, tasks, plans and monthly progress in a normalized PostgreSQL model. It knows nothing about Kafka.</description>
 
     <dependencies>
         <dependency>

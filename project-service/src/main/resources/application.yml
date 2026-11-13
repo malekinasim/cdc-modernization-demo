@@ -1,6 +1,6 @@
 spring:
   application:
-    name: legacy-app
+    name: project-service
 
 server:
   port: 8081

@@ -1,10 +1,10 @@
-package io.github.malekinasim.cdcdemo.legacyapp;
+package io.github.malekinasim.cdcdemo.projectservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class LegacyAppApplicationTests {
+class ProjectServiceApplicationTests {
 
     @Test
     void contextLoads() {

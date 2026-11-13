@@ -12,7 +12,7 @@
 
     <artifactId>middleware</artifactId>
     <name>middleware</name>
-    <description>Kafka Streams middleware: unwraps Debezium events, maps them to canonical Avro events, routes by source and prevents sync loops.</description>
+    <description>Kafka Streams middleware: turns CDC row changes into the read model shape with translation, joins and aggregation.</description>
 
     <dependencies>
         <dependency>
