@@ -136,10 +136,15 @@ Outbox (id, aggregateId, type, payload) reliable publishing
 | `ActionPlanned` | `STATUS_CD` changes from `L` to `E` (planning finished) | action-service, query-service |
 | `ActionStructureChanged` | parent, leader or weight of an action changed | middleware (state), query-service |
 | `PlanRebaselined` | change request approved, `PLAN_VER` increased | action-service, middleware, query-service |
-| `TaskProgressSnapshotted` | new row in `ACT_PROGRESS_SNAPSHOT`, or approved snapshot in the outbox | the other side, middleware, query-service |
+| `TaskProgressSnapshotted` | insert **or update** in `ACT_PROGRESS_SNAPSHOT` (legacy has no approval, so every change is final), or an approved snapshot in the outbox | the other side, middleware, query-service |
 | `ActionProgressUpdated` | **computed by the middleware** | origin system of the action, query-service |
 
 Every event carries `eventId`, `occurredAt` and a `source` header (`LEGACY` or `ACTION_SERVICE`).
+
+`TaskProgressSnapshotted` is an **upsert keyed by `(taskId, period)`**, not an append: a correction is a new event
+with the same key and a later `occurredAt`. The middleware's KTables, the action-service copy and the read models keep
+the latest value per key, so a corrected percentage replaces the original one everywhere and the aggregates are
+recomputed. Each event still has its own `eventId`, so the inbox skips redeliveries without skipping corrections.
 `ActionProgressUpdated` carries `period`, `plannedPct`, `actualPct`, `variance` and
 `derivedFrom` (`TASKS` | `CHILDREN` | `LEADER`), so the origin system knows whether a value is measured or derived.
 
@@ -202,5 +207,11 @@ they add size but no new design question.
 
 ## 9. Open points
 
-- Snapshot frequency is monthly; a snapshot can be corrected until it is approved. Corrections after approval are out of scope.
+- Snapshot frequency is monthly, one snapshot per task and period.
+- Corrections: in legacy a snapshot can be corrected at any time and every update is published (see section 5).
+  In action-service a snapshot can be corrected until it is approved; corrections after approval are out of scope.
+- The snapshots of a task are reported in one system only (the department either still uses legacy or has moved),
+  so concurrent corrections of the same snapshot on both sides are not expected. If they happen, the latest
+  `occurredAt` wins.
+- Deleting a snapshot in legacy is out of scope; the legacy app only inserts and updates.
 - Origin systems are simulated by a small `origin-stub` that consumes `origin.*.progress` and logs what it receives.
