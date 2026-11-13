@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: middleware
+
+server:
+  port: 8082

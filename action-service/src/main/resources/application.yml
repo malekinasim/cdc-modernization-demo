@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: action-service
+
+server:
+  port: 8083
