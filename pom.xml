@@ -18,15 +18,15 @@
 
     <name>cdc-modernization-demo</name>
     <description>
-        Legacy system modernization with CDC (Debezium), Kafka, Kafka Streams and CQRS:
-        a legacy monolith kept in sync with a new service during a Strangler Fig migration.
+        CQRS with a CDC-fed read side, and two-way sync between two services without loops,
+        built with Debezium, Kafka and a Kafka Streams middleware.
     </description>
     <url>https://github.com/malekinasim/cdc-modernization-demo</url>
 
     <modules>
-        <module>legacy-app</module>
+        <module>order-service</module>
+        <module>shipping-service</module>
         <module>middleware</module>
-        <module>action-service</module>
         <module>query-service</module>
     </modules>
 

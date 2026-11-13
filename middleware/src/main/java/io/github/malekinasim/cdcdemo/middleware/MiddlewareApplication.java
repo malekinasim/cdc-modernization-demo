@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Kafka Streams middleware: unwraps Debezium events, maps them to canonical Avro events, routes by source and prevents sync loops.
+ * Kafka Streams middleware: translates CDC row changes, builds the read model with joins and aggregation, and syncs order-service and shipping-service without loops.
  */
 @SpringBootApplication
 public class MiddlewareApplication {

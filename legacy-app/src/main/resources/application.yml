@@ -1,6 +1,0 @@
-spring:
-  application:
-    name: legacy-app
-
-server:
-  port: 8081
