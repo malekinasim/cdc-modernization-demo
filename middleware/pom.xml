@@ -12,7 +12,7 @@
 
     <artifactId>middleware</artifactId>
     <name>middleware</name>
-    <description>Kafka Streams middleware: turns CDC row changes into the read model shape with translation, joins and aggregation.</description>
+    <description>Kafka Streams middleware: translates CDC row changes, builds the read model with joins and aggregation, and syncs order-service and shipping-service without loops.</description>
 
     <dependencies>
         <dependency>
