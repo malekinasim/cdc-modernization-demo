@@ -1,0 +1,12 @@
+package io.github.malekinasim.cdcdemo.queryservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class QueryServiceApplicationTests {
+
+    @Test
+    void contextLoads() {
+    }
+}
