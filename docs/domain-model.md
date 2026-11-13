@@ -1,109 +1,124 @@
 # Domain model and design decisions
 
-The demo has one application with CQRS. The application writes to a normalized model; a separate read database
-holds a model with a different shape, built for the screens. CDC and a Kafka Streams middleware connect the two.
+A small web shop. Two services own their own data, a read side answers the queries, and a Kafka Streams middleware
+connects everything through CDC. The demo shows two mechanisms:
 
-The middleware is only justified if the two models are really different, so this document starts there.
+1. **CQRS with a CDC-fed read side.** The read model has a different shape from the write model.
+2. **Two-way sync between two systems without loops.** Both systems change the same order.
 
-## 1. Domain
+The middleware is only justified if the models are really different, so the models come first.
 
-Projects with tasks and monthly progress. Each project has a planned progress curve per task, and every month
-each task gets a snapshot of its actual progress. The question the users care about is
-**"which projects are behind plan, and by how much?"**
+## 1. order-service (command side)
 
-## 2. Write model (`project-service`)
-
-Normalized, designed for correct writes, with a few habits of an older system: code columns and dates as strings.
+Normalized, with a few habits of an older system: code columns, dates as strings, prices in öre.
 
 ```
-EMPLOYEE          (EMP_ID, FIRST_NM, LAST_NM, DEPT_CD)
-PROJECT           (PRJ_ID, PRJ_CD 'PRJ-2026-014', PRJ_TITLE, STATUS_CD 'A'|'H'|'C', OWNER_ID → EMPLOYEE,
-                   START_DT '20261201', END_DT '20270331', LAST_UPD_TS)
-TASK              (TASK_ID, PRJ_ID → PROJECT, TASK_TITLE, WEIGHT, LAST_UPD_TS)
-TASK_ASSIGNEE     (TASK_ID, EMP_ID)                          -- one or more people per task
-TASK_PLAN         (TASK_ID, PERIOD '202612', PLAN_PCT)       -- planned curve per task
-PROGRESS_SNAPSHOT (TASK_ID, PERIOD, ACTUAL_PCT, REPORTED_BY, LAST_UPD_TS)
-                                                              -- one per task and month, can be corrected
+CUSTOMER    (CUST_ID, FIRST_NM, LAST_NM, EMAIL, CITY)
+PRODUCT     (PROD_ID, SKU, PROD_NM, UNIT_PRICE_ORE)
+ORDERS      (ORD_ID, ORD_NO 'ORD-000123', CUST_ID → CUSTOMER,
+             STATUS_CD 'O' open | 'P' placed | 'X' cancelled | 'S' shipped | 'D' delivered,
+             ORD_DT '20261113', LAST_UPD_BY, LAST_UPD_TS)
+ORDER_LINE  (LINE_ID, ORD_ID → ORDERS, PROD_ID → PRODUCT, QTY, UNIT_PRICE_ORE)
 ```
 
-The application only does what a command side does: create projects and tasks, assign people, set the plan,
-report and correct monthly progress. It has no Kafka code and publishes no events.
+The customer builds an order while it is `O` (lines are added one by one), then places it (`P`) or cancels it (`X`).
+`order-service` has no Kafka code and publishes no events.
 
-## 3. Read model (`query-service`)
+## 2. shipping-service (a second system)
 
-Denormalized, one table per screen, ready to return without joins.
+Owned by "another team", with its own model and its own words:
 
 ```
-project_dashboard
-  project_code, title, status 'ACTIVE'|'ON_HOLD'|'CLOSED', owner_name, department,
-  start_date DATE, end_date DATE,
-  period, planned_pct, actual_pct, variance, is_delayed,
-  task_count, tasks_missing_report, last_reported_at
-
-my_tasks
-  employee_id, employee_name, project_code, project_title, task_title,
-  period, planned_pct, actual_pct, report_missing
-
-project_progress_history
-  project_code, period, planned_pct, actual_pct            -- the S-curve
+shipment       (id UUID, order_ref 'ORD-000123', recipient_name, city,
+                status PENDING | PICKING | SHIPPED | DELIVERED | CANCELLED,
+                carrier, tracking_no, shipped_at TIMESTAMPTZ, delivered_at TIMESTAMPTZ,
+                updated_by, updated_at)
+shipment_item  (shipment_id, sku, quantity)
 ```
 
-## 4. How different the two models are
+The warehouse picks, ships and confirms delivery in this service.
 
-| Write model | Read model | Who closes the gap |
+## 3. Read model (query-service)
+
+Denormalized, one table per screen:
+
+```
+order_summary
+  order_no, customer_name, city, order_date DATE, status 'PLACED'|'SHIPPED'|...,
+  item_count, total_sek NUMERIC, carrier, tracking_no, shipped_at
+
+daily_sales
+  sales_date, sku, product_name, quantity, revenue_sek
+```
+
+`order_summary` combines data from **both** services: the order and its total from `order-service`,
+carrier and tracking number from `shipping-service`. No single write database can answer
+"show me my order with its tracking number", only the read model can. That is the reason for CQRS here.
+
+## 4. How different the models are
+
+| Write side | Read side / other system | Who closes the gap |
 |---|---|---|
-| `STATUS_CD 'A'`, `'20261201'`, `'202612'` | `'ACTIVE'`, `DATE`, `YearMonth` | translation |
-| Owner is an ID in `PROJECT` | Owner name and department in the row | join with `EMPLOYEE` |
-| Plan and actual are in two tables | Planned, actual and variance side by side | join `TASK_PLAN` with `PROGRESS_SNAPSHOT` |
-| Progress per task | Progress per project, weighted by `TASK.WEIGHT` | aggregation |
-| No concept of "delayed" or "missing report" | `is_delayed`, `report_missing` | derived values |
-| One row per assignment | One row per person and task, with project data | fan-out |
+| `STATUS_CD 'P'`, `ORD_DT '20261113'`, `UNIT_PRICE_ORE 14900` | `'PLACED'`, `DATE`, `149.00 SEK` | translation |
+| Customer is an ID in `ORDERS` | Name and city in the row | join with `CUSTOMER` |
+| Product is an ID in `ORDER_LINE` | SKU and product name | join with `PRODUCT` |
+| One row per order line | Item count and total per order, sales per product and day | aggregation |
+| Order lines arrive one by one while the order is open | One shipment with all its items, created once | business event from a status change |
+| Shipping status lives in another database | Carrier and tracking in `order_summary` | join across systems |
 
-One snapshot written by one user changes several read rows: the project's dashboard row, its history row, and a
-`my_tasks` row for every assignee of that task.
+## 5. The two-way sync
 
-## 5. Why the middleware (Kafka Streams)
+| Direction | Trigger | Effect |
+|---|---|---|
+| order → shipping | Order goes from `O` to `P` | Create a shipment with recipient and all items |
+| order → shipping | Order goes to `X` | Shipment becomes `CANCELLED` (only if not shipped yet) |
+| shipping → order | Shipment becomes `SHIPPED` or `DELIVERED` | `ORDERS.STATUS_CD` becomes `S` or `D` |
+| (not synced) | `PICKING` | Has no counterpart in the order model; lossy mapping on purpose |
 
-- **Why not let `project-service` update the read database itself?** Then every write needs a second write in
-  another database (the dual-write problem), and the command side would have to know the shape of every screen.
-  With CDC the command side stays simple, and new read models can be added without touching it.
-- **Why not a plain Kafka consumer?** Debezium gives one topic per table. Building the read model needs state:
-  KTables of projects, tasks, plans and employees for the joins, and a running aggregate per project and period.
-  That is what Kafka Streams is for.
+The middleware writes into each service through that service's REST API, so each service keeps its own rules.
+
+### The loop
+
+1. The warehouse ships: `shipment.status = SHIPPED`.
+2. CDC on the shipping DB → middleware → `order-service` sets `STATUS_CD = 'S'`.
+3. CDC on the order DB sees an update on `ORDERS` → middleware → sends the status to `shipping-service` again
+   → CDC on the shipping DB → ... forever.
+
+A `source` header in Kafka does not help: the change in step 3 starts in the database, and CDC events do not carry
+headers from earlier hops. The origin has to be **in the data**:
+
+- every write done by the sync sets `LAST_UPD_BY = 'SYNC'` (order DB) or `updated_by = 'SYNC'` (shipping DB);
+- the middleware drops CDC events with that value before routing them to the other system;
+- the same events still go to the read model, so the read side stays correct.
+
+## 6. Why the middleware is Kafka Streams
+
+- **Why not let the services write to each other and to the read DB?** Every change would need extra writes to other
+  systems (the dual-write problem), and each service would have to know the others' models. With CDC the services
+  stay simple and know nothing about each other.
+- **Why not a plain Kafka consumer?** Debezium gives one topic per table. Joins (orders with customers, lines with
+  products), aggregation (totals, daily sales) and "create the shipment once, when the order is placed, with all its
+  lines" all need state: KTables and aggregates. That is what Kafka Streams is for.
 
 What the middleware does:
 
-1. Unwraps the Debezium envelope and translates codes, dates and periods.
-2. Keeps KTables of employees, projects, tasks, assignees and plans.
-3. Joins each snapshot with its task, plan and project.
-4. Aggregates task progress into project progress per period, weighted, and derives variance and the delayed flag.
-5. Publishes the read model rows to output topics (Avro, Schema Registry), keyed by the read model's primary key.
-6. Sends records it cannot process (unknown task, `ACTUAL_PCT = 130`, period `'202613'`) to a dead-letter topic
+1. Unwraps the Debezium envelopes and translates codes, dates and prices.
+2. Keeps KTables of customers, products, orders, order lines and shipments.
+3. Builds and publishes the read model rows, keyed by their primary keys.
+4. Routes changes between the two services, and filters out changes made by the sync (loop prevention).
+5. Sends records it cannot process (unknown product, negative quantity, date `'20261332'`) to a dead-letter topic
    and keeps going.
 
-`query-service` consumes the output topics and upserts the rows into the read database.
+## 7. Design decisions
 
-## 6. Design decisions
-
-- **Upsert, keyed by the read model's primary key.** Every output record is the full new state of a read row.
-  Applying it twice gives the same result, so redelivered messages are harmless (idempotency without an inbox table).
-- **Corrections just work.** A corrected snapshot is an update in the write database, so CDC emits it, the aggregate
-  is recomputed and the read rows are replaced.
-- **The read model can be rebuilt.** Reset the middleware, empty the read database, and replay the CDC topics from
-  the beginning. Adding a new screen later works the same way.
-- **Eventual consistency is accepted.** The read side is a few seconds behind the write side; consumer lag is
+- **Upsert, keyed by the read model's primary key.** Every output record is the full new state of a read row, so
+  applying it twice changes nothing. Redelivered messages are harmless.
+- **Idempotent sync.** "Create shipment for `ORD-000123`" is ignored if the shipment already exists; setting a status
+  to the value it already has is a no-op. A redelivered sync message changes nothing.
+- **The read model can be rebuilt** by resetting the middleware, emptying the read DB and replaying the CDC topics.
+- **Eventual consistency is accepted.** The read side and the other system are a few seconds behind; consumer lag is
   measured and shown in Grafana.
 
-## 7. In the real system (for the interview)
+## 8. Out of scope
 
-In the real project the CDC pipeline kept a legacy system and new services in sync in **both** directions.
-That adds problems this demo deliberately leaves out, but which the README will explain:
-- **Loops.** A change synced into system B is captured by CDC in B and sent back to A. A `source` header is not
-  enough, because CDC events do not carry Kafka headers from earlier hops; the origin has to be stored in the data
-  (for example `LAST_UPD_BY = 'SYNC'`) and filtered in the middleware.
-- **Inbox and outbox** in services that consume and publish events themselves.
-
-## 8. Possible extensions (not planned)
-
-Plans that group projects, with progress rolled up recursively; linking projects to strategic goals;
-two-way sync with a second system. Each would show one more technique, but none is needed for the core story.
+Payments, stock levels, returns, partial shipments, authentication. They would add size but no new design question.
