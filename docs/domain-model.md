@@ -145,6 +145,7 @@ Every event carries `eventId`, `occurredAt` and a `source` header (`LEGACY` or `
 with the same key and a later `occurredAt`. The middleware's KTables, the action-service copy and the read models keep
 the latest value per key, so a corrected percentage replaces the original one everywhere and the aggregates are
 recomputed. Each event still has its own `eventId`, so the inbox skips redeliveries without skipping corrections.
+
 `ActionProgressUpdated` carries `period`, `plannedPct`, `actualPct`, `variance` and
 `derivedFrom` (`TASKS` | `CHILDREN` | `LEADER`), so the origin system knows whether a value is measured or derived.
 
