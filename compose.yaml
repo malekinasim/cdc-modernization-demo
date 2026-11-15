@@ -1,7 +1,10 @@
 include:
-  - order-service/compose.yaml
-  - shipping-service/compose.yaml
-  - query-service/compose.yaml
+  - path: order-service/compose.yaml
+    env_file: .env
+  - path: shipping-service/compose.yaml
+    env_file: .env
+  - path: query-service/compose.yaml
+    env_file: .env
 services:
   pgAdmin:
     image: dpage/pgadmin4
