@@ -50,6 +50,8 @@ services:
   kafka-connect:
     build:
      context: ./kafka-connect
+     args:
+       CONFLUENT_VERSION: ${CONFLUENT_VERSION:-8.4.0}
      dockerfile: Dockerfile
     image: custom-debezium-connect:latest
     hostname: kafka-connect
@@ -61,7 +63,7 @@ services:
       - shipping-database
       - read-database
     ports:
-      - "${KAFKA_CONNECT_PORT:-8087}:8087"
+      - "${KAFKA_CONNECT_PORT:-8087}:8083"
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:${KAFKA_INTERNAL_PORT:-29092}
       CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
