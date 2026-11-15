@@ -12,7 +12,7 @@ services:
       - order-database-data:/var/lib/postgresql/data
 
     ports:
-      - "${ORDER_DB_PORT}:${ORDER_DB_PORT}"
+      - "${ORDER_DB_PORT}:5432"
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
@@ -29,7 +29,7 @@ services:
 
     environment:
       SERVER_PORT: ${ORDER_APP_PORT}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://order-database:${ORDER_DB_PORT}/${ORDER_DB}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-database:5432/${ORDER_DB}
       SPRING_DATASOURCE_USERNAME: ${ORDER_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${ORDER_DB_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:${KAFKA_INTERNAL_PORT:-29092}
