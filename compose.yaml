@@ -6,8 +6,8 @@ services:
   pgAdmin:
     image: dpage/pgadmin4
     environment:
-      PGADMIN_DEFAULT_EMAIL:${PGADMIN_DEFAULT_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD:${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     ports:
       - "${PGADMIN_PORT}:80"
     depends_on:
@@ -49,8 +49,8 @@ services:
 
   kafka-connect:
     build:
-    context: ./kafka-connect
-    dockerfile: Dockerfile
+     context: ./kafka-connect
+     dockerfile: Dockerfile
     image: custom-debezium-connect:latest
     hostname: kafka-connect
     container_name: kafka-connect
