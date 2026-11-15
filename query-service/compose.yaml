@@ -23,12 +23,14 @@ services:
     image: cdc-modernization-demo/query-service:local
     container_name: query-service
     environment:
+      SERVER_PORT: ${READ_APP_PORT}
       SPRING_DATA_MONGODB_URI: ${SPRING_DATA_MONGODB_URI}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:${KAFKA_INTERNAL_PORT:-29092}
       SPRING_KAFKA_PROPERTIES_SCHEMA_REGISTRY_URL: http://schema-registry:8086
 
+
     ports:
-      - "${READ_APP_PORT}:8080"
+      - "${READ_APP_PORT}:${READ_APP_PORT}"
     depends_on:
       read-database:
         condition: service_healthy

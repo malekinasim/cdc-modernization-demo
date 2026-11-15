@@ -36,7 +36,7 @@ services:
       SPRING_KAFKA_PROPERTIES_SCHEMA_REGISTRY_URL: http://schema-registry:8086
 
     ports:
-      - "${SHIPPING_APP_PORT}:8081"
+      - "${SHIPPING_APP_PORT}:${SHIPPING_APP_PORT}"
     depends_on:
       shipping-database:
         condition: service_healthy
