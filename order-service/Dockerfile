@@ -27,6 +27,6 @@ COPY --from=build \
     /app/order-service/target/order-service.jar \
     app.jar
 
-EXPOSE 8083
+EXPOSE 8081
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
