@@ -58,6 +58,9 @@ services:
       depends_on:
         - kafka
         - schema-registry
+        - order_database
+        - shipping_database
+        - read-database
       ports:
         - "${KAFKA_CONNECT_PORT:-8087}:8087"
       environment:
