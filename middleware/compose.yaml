@@ -1,7 +1,7 @@
 services:
   middleware:
     build:
-      context: .
+      context: ..
       dockerfile: middleware/Dockerfile
     image: cdc-modernization-demo/middleware:local
     container_name: middleware
@@ -13,7 +13,7 @@ services:
     volumes:
       - middleware-state:/var/lib/kafka-streams
     ports:
-      - "${MIDDLEWARE_APP_PORT:-9002}:8080"
+      - "${MIDDLEWARE_APP_PORT:-8082}:8080"
     depends_on:
       - kafka
       - schema-registry
