@@ -1,0 +1,21 @@
+services:
+  middleware:
+    build:
+      context: ..
+      dockerfile: middleware/Dockerfile
+    image: cdc-modernization-demo/middleware:local
+    container_name: middleware
+    environment:
+      SERVER_PORT: ${MIDDLEWARE_APP_PORT}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:${KAFKA_INTERNAL_PORT:-29092}
+      SPRING_KAFKA_PROPERTIES_SCHEMA_REGISTRY_URL: http://schema-registry:8086
+      SPRING_KAFKA_STREAMS_STATE_DIR: /var/lib/kafka-streams
+    volumes:
+      - middleware-state:/var/lib/kafka-streams
+    ports:
+      - "${MIDDLEWARE_APP_PORT}:${MIDDLEWARE_APP_PORT}"
+    depends_on:
+      - kafka
+      - schema-registry
+volumes:
+  middleware-state:

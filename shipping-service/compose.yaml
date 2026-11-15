@@ -1,0 +1,45 @@
+services:
+  shipping-database:
+    image: postgres:17
+    container_name: shipping-database
+    command: ["postgres", "-c", "wal_level=logical"]
+    environment:
+      POSTGRES_DB: ${SHIPPING_DB}
+      POSTGRES_USER: ${SHIPPING_DB_USER}
+      POSTGRES_PASSWORD: ${SHIPPING_DB_PASSWORD}
+
+    volumes:
+      - shipping-database-data:/var/lib/postgresql/data
+
+    ports:
+      - "${SHIPPING_DB_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+  shipping-service:
+    build:
+      context: ..
+      dockerfile: shipping-service/Dockerfile
+
+    image: cdc-modernization-demo/shipping-service:local
+    container_name: shipping-service
+
+    environment:
+      SERVER_PORT: ${SHIPPING_APP_PORT}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://shipping-database:5432/${SHIPPING_DB}
+      SPRING_DATASOURCE_USERNAME: ${SHIPPING_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${SHIPPING_DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:${KAFKA_INTERNAL_PORT:-29092}
+      SPRING_KAFKA_PROPERTIES_SCHEMA_REGISTRY_URL: http://schema-registry:8086
+
+    ports:
+      - "${SHIPPING_APP_PORT}:${SHIPPING_APP_PORT}"
+    depends_on:
+      shipping-database:
+        condition: service_healthy
+
+volumes:
+  shipping-database-data:
