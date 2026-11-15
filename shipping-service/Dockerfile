@@ -1,32 +1,29 @@
-FROM eclipse-temurin:21-jdk AS build
+FROM maven:3.9-eclipse-temurin-21 AS build
 LABEL authors="maleki"
 
 WORKDIR /app
 
-# Maven Wrapper
-COPY .mvn/ .mvn/
-COPY mvnw ./
 
 # Parent and  Service POMs
 COPY pom.xml ./
+COPY order-service/pom.xml order-service/pom.xml
 COPY shipping-service/pom.xml shipping-service/pom.xml
-RUN chmod +x mvnw
+COPY query-service/pom.xml query-service/pom.xml
+COPY middleware/pom.xml middleware/pom.xml
+
 
 # Download dependencies for Docker layer caching
-RUN ./mvnw -B -pl shipping-service -am dependency:go-offline
+RUN mvn -B -pl shipping-service -am dependency:go-offline
 
 # Copy only the  source code
 COPY shipping-service/src shipping-service/src
+RUN mvn -B -pl shipping-service -am package -DskipTests
+
+
 
 # Runtime stage
 FROM eclipse-temurin:21-jre
-
 WORKDIR /app
-
-COPY --from=build \
-    /app/shipping-service/target/shipping-service.jar \
-    app.jar
-
-EXPOSE 8084
+COPY --from=build /app/shipping-service/target/*.jar app.jar
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
