@@ -1,0 +1,49 @@
+services:
+  read-database:
+    image: mongo:7.0
+    container_name: read-database
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE:${MONGO_DB_NAME}
+    ports:
+      - "${DB_PORT}:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    restart: unless-stopped
+    ports:
+      - "${READ_MONGO_EXPRESS_PORT}:8082"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USER}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      read-database:
+        condition: service_healthy
+  query-service:
+    build:
+      context: ..
+      dockerfile: query-service/Dockerfile
+    image: cdc-modernization-demo/query-service:local
+    container_name: query-service
+    environment:
+      SPRING_DATA_MONGODB_URI: ${SPRING_DATA_MONGODB_URI}
+
+    ports:
+      - "${APP_PORT}:8080"
+    depends_on:
+      read-database:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
