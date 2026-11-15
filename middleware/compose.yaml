@@ -13,7 +13,7 @@ services:
     volumes:
       - middleware-state:/var/lib/kafka-streams
     ports:
-      - "${MIDDLEWARE_APP_PORT:-8082}:8080"
+      - "${MIDDLEWARE_APP_PORT}:${MIDDLEWARE_APP_PORT}"
     depends_on:
       - kafka
       - schema-registry

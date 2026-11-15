@@ -2,7 +2,7 @@ services:
   order-database:
     image: postgres:17
     container_name: order-database
-
+    command: ["postgres", "-c", "wal_level=logical"]
     environment:
       POSTGRES_DB: ${ORDER_DB}
       POSTGRES_USER: ${ORDER_DB_USER}
@@ -24,7 +24,6 @@ services:
     build:
       context: ..
       dockerfile: order-service/Dockerfile
-
     image: cdc-modernization-demo/order-service:local
     container_name: order-service
 

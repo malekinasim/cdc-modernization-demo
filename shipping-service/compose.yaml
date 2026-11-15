@@ -2,7 +2,7 @@ services:
   shipping-database:
     image: postgres:17
     container_name: shipping-database
-
+    command: ["postgres", "-c", "wal_level=logical"]
     environment:
       POSTGRES_DB: ${SHIPPING_DB}
       POSTGRES_USER: ${SHIPPING_DB_USER}
