@@ -54,17 +54,23 @@ Kafka Streams · Micrometer · Prometheus · Grafana · Testcontainers · Docker
 
 ## How to run
 
-Requirements: JDK 21 and Maven 3.9+. Docker is needed from issue #2 onward.
+Requirements: Docker, JDK 21 and Maven 3.9+.
+
+```bash
 cp .env.example .env
 docker compose up -d
-# Kafka UI: http://localhost:8080
+```
+
+| Tool | URL |
+|---|---|
+| Kafka UI | http://localhost:8080 |
+| Schema Registry | http://localhost:8086 |
+| Kafka Connect | http://localhost:8087 |
 
 ```bash
 # build and run all tests
 mvn verify
 ```
-
-The Docker Compose setup comes in issue #2. Run instructions for the full pipeline will be added as each sprint lands.
 
 ## Roadmap
 

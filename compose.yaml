@@ -67,7 +67,7 @@ services:
       - schema-registry
       - order-database
       - shipping-database
-      - read-database
+
     ports:
       - "${KAFKA_CONNECT_PORT:-8087}:8083"
     environment:
