@@ -1,0 +1,56 @@
+-- Legacy-style schema: short upper-case column names, one-character status codes,
+-- the order date as a string and a price in öre as an integer.
+
+CREATE TABLE CUSTOMER
+(
+    ID          BIGSERIAL PRIMARY KEY,
+    FIRST_NM    VARCHAR(50)  NOT NULL,
+    LAST_NM     VARCHAR(50)  NOT NULL,
+    EMAIL       VARCHAR(120) NOT NULL,
+    CITY        VARCHAR(60),
+    LAST_UPD_BY VARCHAR(30)  NOT NULL,
+    LAST_UPD_TS TIMESTAMP(6) WITH TIME ZONE NOT NULL,
+    CONSTRAINT uk_customer_email UNIQUE (EMAIL)
+);
+
+CREATE TABLE PRODUCT
+(
+    ID             BIGSERIAL PRIMARY KEY,
+    SKU            VARCHAR(40)  NOT NULL,
+    PROD_NM        VARCHAR(120) NOT NULL,
+    UNIT_PRICE_ORE INTEGER      NOT NULL,
+    LAST_UPD_BY    VARCHAR(30)  NOT NULL,
+    LAST_UPD_TS    TIMESTAMP(6) WITH TIME ZONE NOT NULL,
+    CONSTRAINT uk_product_sku UNIQUE (SKU)
+);
+
+-- ORDERS, not ORDER: ORDER is a reserved SQL keyword.
+CREATE TABLE ORDERS
+(
+    ID          BIGSERIAL PRIMARY KEY,
+    ORD_NO      VARCHAR(20) NOT NULL,
+    CUST_ID     BIGINT      NOT NULL,
+    STATUS_CD   CHAR(1)     NOT NULL,
+    ORD_DT      VARCHAR(8)  NOT NULL,
+    LAST_UPD_BY VARCHAR(30) NOT NULL,
+    LAST_UPD_TS TIMESTAMP(6) WITH TIME ZONE NOT NULL,
+    CONSTRAINT uk_orders_ord_no UNIQUE (ORD_NO),
+    CONSTRAINT fk_orders_customer FOREIGN KEY (CUST_ID) REFERENCES CUSTOMER (ID)
+);
+
+CREATE INDEX ix_orders_status ON ORDERS (STATUS_CD);
+
+CREATE TABLE ORDER_LINE
+(
+    ID             BIGSERIAL PRIMARY KEY,
+    ORD_ID         BIGINT      NOT NULL,
+    PROD_ID        BIGINT      NOT NULL,
+    QTY            INTEGER     NOT NULL,
+    UNIT_PRICE_ORE INTEGER     NOT NULL,
+    LAST_UPD_BY    VARCHAR(30) NOT NULL,
+    LAST_UPD_TS    TIMESTAMP(6) WITH TIME ZONE NOT NULL,
+    CONSTRAINT fk_order_line_order FOREIGN KEY (ORD_ID) REFERENCES ORDERS (ID),
+    CONSTRAINT fk_order_line_product FOREIGN KEY (PROD_ID) REFERENCES PRODUCT (ID)
+);
+
+CREATE INDEX ix_order_line_order ON ORDER_LINE (ORD_ID);
