@@ -56,9 +56,13 @@ public class Order extends BaseEntity {
         lines.add(line);
     }
 
-    public int totalOre() {
+    /**
+     * The order total in ore. Computed as a long: an int would overflow on a large enough
+     * quantity and silently return a negative amount.
+     */
+    public long totalOre() {
         return lines.stream()
-                .mapToInt(line -> line.getUnitPriceOre() * line.getQuantity())
+                .mapToLong(line -> (long) line.getUnitPriceOre() * line.getQuantity())
                 .sum();
     }
 }

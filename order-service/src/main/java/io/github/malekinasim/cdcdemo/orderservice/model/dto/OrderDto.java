@@ -9,6 +9,6 @@ public record OrderDto(
         String customerName,
         Character status,
         String orderDate,
-        Integer totalOre,
+        Long totalOre,
         List<OrderLineDto> lines) {
 }

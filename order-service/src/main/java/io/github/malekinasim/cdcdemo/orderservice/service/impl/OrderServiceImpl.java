@@ -60,7 +60,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderDto addLine(String orderNumber, OrderItemDto request) {
-        Order order = requireOrder(orderNumber);
+        Order order = requireOrderForUpdate(orderNumber);
         if (order.getStatus() != Order.STATUS_OPEN) {
             throw new OrderRuleViolationException(
                     "Order " + orderNumber + " is in status " + order.getStatus()
@@ -76,7 +76,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderDto placeOrder(String orderNumber) {
-        Order order = requireOrder(orderNumber);
+        Order order = requireOrderForUpdate(orderNumber);
         if (order.getStatus() != Order.STATUS_OPEN) {
             throw new OrderRuleViolationException(
                     "Only an open order can be placed; order " + orderNumber
@@ -93,7 +93,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderDto cancelOrder(String orderNumber) {
-        Order order = requireOrder(orderNumber);
+        Order order = requireOrderForUpdate(orderNumber);
         if (order.getStatus() == Order.STATUS_SHIPPED || order.getStatus() == Order.STATUS_DELIVERED) {
             throw new OrderRuleViolationException(
                     "Order " + orderNumber + " has already left the warehouse (status "
@@ -114,8 +114,12 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> notFound(orderNumber)));
     }
 
-    private Order requireOrder(String orderNumber) {
-        return orderRepository.findByOrderNumber(orderNumber)
+    /**
+     * Loads an order for a change, locking its row until the transaction commits, so the status
+     * check and the write that follows it cannot be interleaved with another request.
+     */
+    private Order requireOrderForUpdate(String orderNumber) {
+        return orderRepository.findByOrderNumberForUpdate(orderNumber)
                 .orElseThrow(() -> notFound(orderNumber));
     }
 

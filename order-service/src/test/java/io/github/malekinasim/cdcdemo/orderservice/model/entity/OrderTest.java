@@ -29,6 +29,15 @@ class OrderTest {
     }
 
     @Test
+    void aLargeTotalDoesNotOverflow() {
+        Order order = new Order();
+        // 60_000 x 39_900 ore is past Integer.MAX_VALUE: in int arithmetic this comes back negative.
+        order.addLine(line(39_900, 60_000));
+
+        assertThat(order.totalOre()).isEqualTo(2_394_000_000L);
+    }
+
+    @Test
     void addingALineLinksItBackToTheOrder() {
         Order order = new Order();
         OrderLine line = line(12900, 1);

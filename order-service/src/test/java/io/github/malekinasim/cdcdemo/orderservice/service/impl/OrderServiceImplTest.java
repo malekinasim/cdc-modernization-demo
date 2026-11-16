@@ -138,7 +138,7 @@ class OrderServiceImplTest {
     }
 
     private void existingOrder(Order order) {
-        when(orderRepository.findByOrderNumber(order.getOrderNumber())).thenReturn(Optional.of(order));
+        when(orderRepository.findByOrderNumberForUpdate(order.getOrderNumber())).thenReturn(Optional.of(order));
     }
 
     private static Order openOrder() {
