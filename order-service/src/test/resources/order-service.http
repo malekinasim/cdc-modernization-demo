@@ -1,0 +1,50 @@
+### Open a new order for customer 1 (seeded)
+POST http://localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "customerId": 1
+}
+
+> {% client.global.set("orderNo", response.body.orderNumber); %}
+
+### Add two coffee mugs (product 1)
+POST http://localhost:8081/api/orders/{{orderNo}}/lines
+Content-Type: application/json
+
+{
+  "productId": 1,
+  "quantity": 2
+}
+
+### Add one notebook (product 3)
+POST http://localhost:8081/api/orders/{{orderNo}}/lines
+Content-Type: application/json
+
+{
+  "productId": 3,
+  "quantity": 1
+}
+
+### Place the order: status O becomes P
+PATCH http://localhost:8081/api/orders/{{orderNo}}/place
+
+### Read the order back
+GET http://localhost:8081/api/orders/{{orderNo}}
+
+### Adding a line after placing is rejected with 409
+POST http://localhost:8081/api/orders/{{orderNo}}/lines
+Content-Type: application/json
+
+{
+  "productId": 1,
+  "quantity": 1
+}
+
+### An unknown order is 404
+GET http://localhost:8081/api/orders/ORD-999999
+
+### A write made by the sync process: LAST_UPD_BY becomes SYNC instead of APP,
+### which is what the middleware filters on to stop sync loops (see #14)
+PATCH http://localhost:8081/api/orders/{{orderNo}}/cancel
+X-Updated-By: SYNC
